@@ -4,6 +4,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { AuthService } from '../../core/services/auth.service';
 import { ChatService } from '../../core/services/chat.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -11,6 +12,7 @@ import { environment } from '../../../environments/environment';
 import { Message, RetrievalMetrics } from '../../core/models/models';
 
 interface FileChip { id: number; name: string; status: string; done: boolean; error: boolean; }
+interface UploadedFile { id: string; name: string; chunks: number; uploadedAt: string; }
 
 @Component({
   selector: 'app-shell',
@@ -129,7 +131,7 @@ interface FileChip { id: number; name: string; status: string; done: boolean; er
             <div class="chat-row-title">{{ c.title || 'New Chat' }}</div>
             <div class="chat-row-time">{{ timeAgo(c.last_message_at || c.created_at) }}</div>
           </div>
-          <button class="chat-row-del" (click)="delChat($event, c.chat_id)">🗑</button>
+          <button class="chat-row-del" title="Delete chat" (click)="delChat($event, c.chat_id)"></button>
         </div>
       }
     </div>
@@ -140,28 +142,27 @@ interface FileChip { id: number; name: string; status: string; done: boolean; er
 
     <!-- HERO -->
     <div class="hero">
-      <div class="hero-title">🧠 Intelligent Document Understanding System</div>
-      <div class="hero-sub">Upload documents and chat to analyze them intelligently. Powered by RAG.</div>
-    </div>
-
-    <!-- MODE BAR -->
-    <div class="modebar">
-      <div class="chat-current-title">
-        {{ chatSvc.currentChat()?.title || 'Select or create a chat' }}
+      <div class="hero-left">
+        <div class="hero-title">🧠 Intelligent Document Understanding System</div>
       </div>
-      <div class="modebar-right">
-        <span class="mode-lbl">Mode:</span>
-        <select class="mode-sel" [(ngModel)]="selectedMode" (ngModelChange)="onModeChange($event)">
-          <option value="qa">💬  Q&amp;A</option>
-          <option value="translator">🌐  Translator</option>
-          <option value="resume">📄  Resume Analyzer</option>
-          <option value="question_paper">📚  Question Paper</option>
-          <option value="legal">⚖️  Legal Simplifier</option>
-          <option value="medical">🩺  Medical Report</option>
-        </select>
-        <button class="incognito-toggle" [class.on]="chatSvc.incognito()" (click)="toggleIncognito()">
-          🕵️ Incognito
-        </button>
+      <div class="hero-divider"></div>
+      <div class="hero-right">
+        <div class="controls-section">
+          <div class="control-group">
+            <span class="mode-lbl">Mode:</span>
+            <select class="mode-sel-hero" [(ngModel)]="selectedMode" (ngModelChange)="onModeChange($event)">
+              <option value="qa">💬  Q&amp;A</option>
+              <option value="translator">🌐  Translator</option>
+              <option value="resume">📄  Resume Analyzer</option>
+              <option value="question_paper">📚  Question Paper</option>
+              <option value="legal">⚖️  Legal Simplifier</option>
+              <option value="medical">🩺  Medical Report</option>
+            </select>
+          </div>
+          <button class="incognito-toggle-hero" [class.on]="chatSvc.incognito()" (click)="toggleIncognito()">
+            🕵️ Incognito
+          </button>
+        </div>
       </div>
     </div>
 
@@ -179,7 +180,10 @@ interface FileChip { id: number; name: string; status: string; done: boolean; er
           <div class="msg-av" [class.u]="msg.role==='user'" [class.a]="msg.role==='assistant'">
             {{ msg.role === 'user' ? authSvc.userInitial : '🤖' }}
           </div>
-          <div class="msg-bubble" [innerHTML]="fmtMsg(msg.content)">
+          <div class="msg-container">
+            <div class="msg-bubble" [innerHTML]="fmtMsg(msg.content)">
+            </div>
+            <button class="delete-msg-btn" title="Delete message" (click)="deleteMessage($index)">✕</button>
           </div>
         </div>
         @if (msg.role === 'assistant' && msg.metrics) {
@@ -203,19 +207,11 @@ interface FileChip { id: number; name: string; status: string; done: boolean; er
     </div>
 
     <!-- INPUT AREA -->
-    <div class="input-area">
-
-      <!-- DRAG & DROP ZONE -->
-      <div class="drop-zone"
-           [class.over]="isDragging"
-           (dragover)="onDragOver($event)"
-           (dragleave)="onDragLeave($event)"
-           (drop)="onDrop($event)"
-           (click)="fileInput.click()">
-        <div class="drop-icon">{{ isDragging ? '📂' : '📂' }}</div>
-        <div class="drop-title">{{ isDragging ? 'Release to upload' : 'Drop your file here, or click to browse' }}</div>
-        <div class="drop-sub">PDF, DOCX, TXT, PNG, JPG — drag &amp; drop, click, or paste (Ctrl+V)</div>
-      </div>
+    <div class="input-area"
+         [class.dragging-over]="isDragging"
+         (dragover)="onDragOver($event)"
+         (dragleave)="onDragLeave($event)"
+         (drop)="onDrop($event)">
       <input #fileInput type="file" style="display:none"
              accept=".pdf,.docx,.txt,.png,.jpg,.jpeg" multiple
              (change)="onFileChange($event)">
@@ -236,10 +232,21 @@ interface FileChip { id: number; name: string; status: string; done: boolean; er
         </div>
       }
 
-      <!-- MEDICAL NOTICE -->
-      @if (selectedMode === 'medical') {
-        <div class="medical-notice">
-          🩺 Upload your medical report — it will be automatically analyzed. No text input needed.
+      <!-- UPLOADED FILES SECTION -->
+      @if (uploadedFiles.length) {
+        <div class="uploaded-files-section">
+          <div class="uploaded-files-label">📂 Uploaded Files</div>
+          <div class="uploaded-files-list">
+            @for (file of uploadedFiles; track file.id) {
+              <div class="uploaded-file-item">
+                <div class="file-info">
+                  <span class="file-name">📄 {{ file.name }}</span>
+                  <span class="file-chunks">{{ file.chunks }} chunks</span>
+                </div>
+                <button class="remove-file-btn" title="Remove file" (click)="deleteUploadedFile(file.id)">🗑️</button>
+              </div>
+            }
+          </div>
         </div>
       }
 
@@ -257,6 +264,51 @@ interface FileChip { id: number; name: string; status: string; done: boolean; er
         <button class="send-btn" [disabled]="chatSvc.isTyping()" (click)="sendMsg()">➤</button>
       </div>
 
+      <!-- DELETE FILE CONFIRMATION -->
+      @if (deleteConfirmFileId) {
+        <div class="delete-confirm-overlay" (click)="cancelDeleteFile()">
+          <div class="delete-confirm-dialog" (click)="$event.stopPropagation()">
+            <div class="delete-confirm-icon">🗑️</div>
+            <div class="delete-confirm-title">Remove File?</div>
+            <div class="delete-confirm-text">This file will be removed from the chat. You can upload it again if needed.</div>
+            <div class="delete-confirm-actions">
+              <button class="btn-cancel" (click)="cancelDeleteFile()">Cancel</button>
+              <button class="btn-delete" (click)="confirmDeleteFile()">Remove</button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- DELETE MESSAGE CONFIRMATION -->
+      @if (deleteConfirmMsgIndex !== null) {
+        <div class="delete-confirm-overlay" (click)="cancelDeleteMessage()">
+          <div class="delete-confirm-dialog" (click)="$event.stopPropagation()">
+            <div class="delete-confirm-icon">🗑️</div>
+            <div class="delete-confirm-title">Delete Message?</div>
+            <div class="delete-confirm-text">This message will be permanently removed from the chat.</div>
+            <div class="delete-confirm-actions">
+              <button class="btn-cancel" (click)="cancelDeleteMessage()">Cancel</button>
+              <button class="btn-delete" (click)="confirmDeleteMessage()">Delete</button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- DELETE CHAT CONFIRMATION -->
+      @if (deleteConfirmChatId) {
+        <div class="delete-confirm-overlay" (click)="cancelDeleteChat()">
+          <div class="delete-confirm-dialog" (click)="$event.stopPropagation()">
+            <div class="delete-confirm-icon">🗑️</div>
+            <div class="delete-confirm-title">Delete Chat?</div>
+            <div class="delete-confirm-text">This chat and all its messages will be permanently deleted. This action cannot be undone.</div>
+            <div class="delete-confirm-actions">
+              <button class="btn-cancel" (click)="cancelDeleteChat()">Cancel</button>
+              <button class="btn-delete" (click)="confirmDeleteChat()">Delete</button>
+            </div>
+          </div>
+        </div>
+      }
+
     </div>
   </div>
 </div>
@@ -269,6 +321,7 @@ export class AppShellComponent implements OnInit, AfterViewChecked {
   authSvc = inject(AuthService);
   chatSvc = inject(ChatService);
   toast   = inject(ToastService);
+  sanitizer = inject(DomSanitizer);
 
   apiUrl = environment.apiUrl;
 
@@ -279,7 +332,11 @@ export class AppShellComponent implements OnInit, AfterViewChecked {
   isDragging   = false;
   isRecording  = false;
   fileChips: FileChip[] = [];
+  uploadedFiles: UploadedFile[] = [];
   chipId = 0;
+  deleteConfirmFileId: string | null = null;
+  deleteConfirmMsgIndex: number | null = null;
+  deleteConfirmChatId: string | null = null;
 
   newUsername = '';
   curPwd = ''; newPwd = '';
@@ -360,11 +417,20 @@ export class AppShellComponent implements OnInit, AfterViewChecked {
 
   delChat(e: Event, chatId: string): void {
     e.stopPropagation();
-    if (!confirm('Delete this chat?')) return;
-    this.chatSvc.deleteChat(chatId).subscribe({
+    this.deleteConfirmChatId = chatId;
+  }
+
+  confirmDeleteChat(): void {
+    if (!this.deleteConfirmChatId) return;
+    this.chatSvc.deleteChat(this.deleteConfirmChatId).subscribe({
       next: () => this.toast.show('Chat deleted', 'ok'),
       error: () => this.toast.show('Delete failed', 'err')
     });
+    this.deleteConfirmChatId = null;
+  }
+
+  cancelDeleteChat(): void {
+    this.deleteConfirmChatId = null;
   }
 
   // ── MODE ──────────────────────────────────────────────────────────────
@@ -412,6 +478,14 @@ export class AppShellComponent implements OnInit, AfterViewChecked {
         chip.done   = true;
         if (res.incognito && res.session_id) this.chatSvc.incognitoSid.set(res.session_id);
         this.toast.show(`✅ ${file.name} indexed (${res.chunks_added} chunks)`, 'ok');
+        // Add to uploaded files
+        const uploadedFile: UploadedFile = {
+          id: crypto.randomUUID(),
+          name: file.name,
+          chunks: res.chunks_added,
+          uploadedAt: new Date().toISOString()
+        };
+        this.uploadedFiles.push(uploadedFile);
         // Remove chip after 3.5s
         setTimeout(() => { this.fileChips = this.fileChips.filter(c => c.id !== id); }, 3500);
         // Auto-send for medical mode
@@ -426,6 +500,39 @@ export class AppShellComponent implements OnInit, AfterViewChecked {
   }
 
   // ── SEND MESSAGE ──────────────────────────────────────────────────────
+  deleteUploadedFile(fileId: string): void {
+    this.deleteConfirmFileId = fileId;
+  }
+
+  confirmDeleteFile(): void {
+    if (!this.deleteConfirmFileId) return;
+    this.uploadedFiles = this.uploadedFiles.filter(f => f.id !== this.deleteConfirmFileId);
+    this.toast.show('File removed from chat', 'ok');
+    this.deleteConfirmFileId = null;
+  }
+
+  cancelDeleteFile(): void {
+    this.deleteConfirmFileId = null;
+  }
+
+  // ── DELETE CHAT MESSAGE ───────────────────────────────────────────────
+  deleteMessage(index: number): void {
+    this.deleteConfirmMsgIndex = index;
+  }
+
+  confirmDeleteMessage(): void {
+    if (this.deleteConfirmMsgIndex === null) return;
+    const messages = this.chatSvc.messages();
+    messages.splice(this.deleteConfirmMsgIndex, 1);
+    this.chatSvc.messages.set([...messages]);
+    this.toast.show('Message deleted', 'ok');
+    this.deleteConfirmMsgIndex = null;
+  }
+
+  cancelDeleteMessage(): void {
+    this.deleteConfirmMsgIndex = null;
+  }
+
   sendMsg(autoMedical = false): void {
     if (!this.chatSvc.currentChat()) { this.toast.show('Create a chat first', 'err'); return; }
     const query = autoMedical ? '' : this.msgText.trim();
@@ -500,10 +607,32 @@ export class AppShellComponent implements OnInit, AfterViewChecked {
     el.style.height = Math.min(el.scrollHeight, 120) + 'px';
   }
 
-  fmtMsg(content: string): string {
-    return (content || '')
+  fmtMsg(content: string): SafeHtml {
+    if (!content) return this.sanitizer.sanitize(1, '') || '';
+    
+    let html = content
+      // Escape HTML special chars first
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/\n/g, '<br>');
+      // Headers
+      .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
+      .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
+      .replace(/^# (.*?)$/gm, '<h1>$1</h1>')
+      // Bold
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      // Italic
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      // Code blocks
+      .replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>')
+      // Inline code
+      .replace(/`(.*?)`/g, '<code>$1</code>')
+      // Lists
+      .replace(/^\* (.*?)$/gm, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+      // Line breaks - collapse multiple newlines to single br
+      .replace(/\n\n+/g, '<br>')
+      .replace(/\n/g, ' ');
+    
+    return this.sanitizer.bypassSecurityTrustHtml(html);
   }
 
   timeAgo(dt: string | null): string {

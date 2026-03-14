@@ -1,22 +1,23 @@
-# Python
+# ═══════════════════════════════════════════════════════════════════════════
+# PYTHON / BACKEND
+# ═══════════════════════════════════════════════════════════════════════════
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyo
+*.pyd
+*.pyc
 .Python
 env/
 venv/
 .venv/
 ENV/
+VENV/
 pip-wheel-metadata/
 *.egg-info/
 .eggs/
 build/
 dist/
-
-# Byte-compiled / optimized / DLL files
-*.pyc
-*.pyo
-*.pyd
 
 # Testing / coverage
 .pytest_cache/
@@ -24,60 +25,151 @@ dist/
 .coverage
 htmlcov/
 coverage.xml
+.pytest_cache
+test-results/
 
-# Virtual environment variables
+# Jupyter / IPython
+.ipynb_checkpoints
+*.ipynb
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ENVIRONMENT & SECRETS
+# ═══════════════════════════════════════════════════════════════════════════
 .env
 .env.*
+!.env.example
+*.key
+*.pem
+*.crt
+*.pfx
 
-# Jupyter
-.ipynb_checkpoints
+# ═══════════════════════════════════════════════════════════════════════════
+# DATABASE & DATA
+# ═══════════════════════════════════════════════════════════════════════════
+# SQLite databases
+*.sqlite3
+*.sqlite
+*.db
+*.db-shm
+*.db-wal
 
-# VS Code
-.vscode/
+# PostgreSQL / MySQL dumps
+*.dump
+*.sql
 
-# OS files
-.DS_Store
-Thumbs.db
-desktop.ini
+# Data directories (chats, documents, vectors, uploads, profile pics)
+/backend/data/
+/backend/data/uploads/
+/backend/data/vector_dbs/
+/backend/data/profile_pics/
+/backend/data/static/
+data/uploads/
+data/vector_dbs/
+data/profile_pics/
+data/static/
 
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Vector store indices
+*.faiss
+**/index.faiss
+**/vector_dbs/
 
-# Angular / Node
+# ═══════════════════════════════════════════════════════════════════════════
+# NODE & FRONTEND
+# ═══════════════════════════════════════════════════════════════════════════
 /frontend/node_modules/
 /frontend/dist/
 /frontend/.angular/
-
-# Frontend build artifacts
-/dist/
-/build/
-
-# Dependency directories
+/frontend/.cache/
+/frontend/build/
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn
+.yarn/cache/
+.yarn/build-state.yml
+dist/
+build/
 
-# Data and large binary artifacts
-/data/uploads/
-/data/vector_dbs/
-/data/profile_pics/
-/data/static/**/index.faiss
-**/index.faiss
-*.faiss
-
-# Local database files
-*.sqlite3
-*..db
-
-# IDEs / editors
-/.idea/
-*.suo
-*.ntvs*
-*.njsproj
+# ═══════════════════════════════════════════════════════════════════════════
+# IDEs & EDITORS
+# ═══════════════════════════════════════════════════════════════════════════
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+.AppleDouble
+.LSOverride
+*.VC.db
+*.vcxproj
 *.sln
+*.suo
+*.njsproj
+*.ntvs*
+*.user
+.netcore/
 
-# Misc
+# ═══════════════════════════════════════════════════════════════════════════
+# OPERATING SYSTEM
+# ═══════════════════════════════════════════════════════════════════════════
+.DS_Store
+Thumbs.db
+desktop.ini
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# ═══════════════════════════════════════════════════════════════════════════
+# LOGS & TEMPORARY FILES
+# ═══════════════════════════════════════════════════════════════════════════
+*.log
+*.logs
+logs/
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PYTHON SPECIFIC
+# ═══════════════════════════════════════════════════════════════════════════
 *.seed
 *.pid
+*.pid.lock
+*.sage.py
+instance/
+.webassets-cache
+*.spec
+.dmypy.json
+dmypy.json
+.pyre/
+__debug_bin
+
+# ═══════════════════════════════════════════════════════════════════════════
+# LLM / AI MODELS (if storing locally)
+# ═══════════════════════════════════════════════════════════════════════════
+/models/
+*.gguf
+*.bin
+*.safetensors
+
+# ═══════════════════════════════════════════════════════════════════════════
+# MISCELLANEOUS
+# ═══════════════════════════════════════════════════════════════════════════
+.cache/
+.local/
+*.cache
+.pytest_plugins
+.coverage.*
+htmlcov/
+.venv/
+venv/
 
