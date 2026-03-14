@@ -1,83 +1,92 @@
-# Production RAG System — Angular Frontend + FastAPI Backend
+# RAG — Retrieval-Augmented Generation Demo
 
-## Structure
-```
-final_project/
-├── backend/          ← FastAPI + FAISS + Groq
-└── frontend_angular/ ← Angular 17 (identical UI to original HTML)
-```
+Lightweight RAG system combining an Angular frontend with a FastAPI backend. The backend handles ingestion, chunking, embeddings, and a vector store (FAISS); the frontend provides authentication and an interactive chat/UI to ask questions over uploaded documents and static knowledge bases.
 
-## Backend Setup
+## Key Features
+- FastAPI backend with modular `app` package (auth, ingestion, rag, llm, db).
+- Angular frontend (SPA) for login, chat, file upload and profile management.
+- Support for building static vector DBs (medical, resume) and per-upload vector DBs.
+- Multiple modes: Q&A, translator, resume analysis, legal/medical helpers, etc.
+
+## Repository Layout
+- `backend/` — Python FastAPI app and ingestion pipeline.
+- `frontend/` — Angular application source.
+- `data/` — runtime artifacts: `uploads/`, `vector_dbs/`, `static/`, `profile_pics/`.
+
+## Prerequisites
+- Python 3.10+ for the backend
+- Node.js 18+ and npm for the frontend
+- (Optional) GPU or sufficiently powerful CPU for embedding generation
+
+## Backend — Quick Start
+1. Open a terminal and create a venv:
+
 ```powershell
 cd backend
-python -m venv venv
-venv\Scripts\activate          # Windows
+python -m venv .venv
+.venv\Scripts\activate    # Windows
 pip install -r requirements.txt
+```
 
-# Create .env from example
+2. Create and edit environment variables (copy from example if present):
+
+```powershell
 copy .env.example .env
-# Edit .env — set GROQ_API_KEY
+# Edit .env to set keys like GROQ_API_KEY, DATABASE_URL, JWT_SECRET_KEY
+```
 
-# Build static knowledge DBs (medical + resume)
+3. (Optional) Build static vector DBs:
+
+```powershell
 python -m app.static_dbs.static_db_builder
+```
 
-# Start server
+4. Run the backend:
+
+```powershell
 uvicorn app.main:app --reload --port 8000
 ```
 
-## Frontend Setup
-```powershell
-cd frontend_angular
+The API will be available at `http://localhost:8000`.
+
+## Frontend — Quick Start
+1. Install dependencies and run dev server:
+
+```bash
+cd frontend
 npm install
 npm start
-# Opens at http://localhost:4200
 ```
 
-## .env (backend)
-```
-GROQ_API_KEY=gsk_your_key_here
-DATABASE_URL=sqlite:///./rag_system.db
-JWT_SECRET_KEY=supersecretkey123456789abcdefgh
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=
-SMTP_PASSWORD=
-SMTP_FROM_EMAIL=
-FRONTEND_VERIFY_URL=http://localhost:4200
-VECTOR_DB_PATH=data/vector_dbs
-STATIC_VECTOR_DB_PATH=data/static/vector_dbs
-UPLOAD_BASE=data/uploads
-PROFILE_PICS_PATH=data/profile_pics
-EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-```
+2. Open `http://localhost:4200` in your browser.
 
-## API Mapping (Angular → Backend)
-| Feature              | Angular Service         | Backend Endpoint                   |
-|----------------------|-------------------------|------------------------------------|
-| Login                | AuthService.login()     | POST /auth/login                   |
-| Signup               | AuthService.signup()    | POST /auth/signup                  |
-| Verify OTP           | AuthService.verifyOtp() | POST /auth/verify-otp              |
-| Resend OTP           | AuthService.resendOtp() | POST /auth/confirm-email           |
-| Forgot password      | AuthService.sendResetOtp() | POST /auth/reset-password       |
-| Reset password       | AuthService.resetPasswordConfirm() | POST /auth/reset-password/confirm |
-| Get profile          | AuthService.fetchProfile() | GET /auth/profile               |
-| Logout               | AuthService.logout()    | POST /auth/logout                  |
-| Change username      | AuthService.changeUsername() | PATCH /profile/username        |
-| Change password      | AuthService.changePassword() | PATCH /profile/password        |
-| Upload profile pic   | AuthService.uploadProfilePic() | POST /profile/picture        |
-| List chats           | ChatService.loadChats() | GET /chats                         |
-| Create chat          | ChatService.createChat() | POST /chat/new                    |
-| Load messages        | ChatService.loadMessages() | GET /chats/:id/messages          |
-| Delete chat          | ChatService.deleteChat() | DELETE /chats/:id                 |
-| Send message         | ChatService.sendMessage() | POST /chat                        |
-| Upload document      | ChatService.uploadFile() | POST /upload                      |
+## Data & Artifacts
+- Uploaded files are stored under `data/uploads/` and per-upload vector DBs under `data/vector_dbs/`.
+- Static DBs live under `data/static/vector_dbs/` (medical, resume).
+- Large binary artifacts (Faiss index files) should be ignored in git — see `.gitignore`.
 
-## Modes
-| Mode           | Key              |
-|----------------|------------------|
-| Q&A            | qa               |
-| Translator     | translator       |
-| Resume Analyzer| resume           |
-| Question Paper | question_paper   |
-| Legal Simplifier| legal           |
-| Medical Report | medical          |
+## Environment Variables (example keys)
+- `GROQ_API_KEY` — Groq or embeddings service key
+- `DATABASE_URL` — e.g. `sqlite:///./data/app.db`
+- `JWT_SECRET_KEY` — secret for signing tokens
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL` — email for OTPs
+- `FRONTEND_VERIFY_URL` — frontend base URL for verification links
+
+## Useful Backend Endpoints
+- `POST /auth/login` — login
+- `POST /auth/signup` — signup
+- `POST /upload` — upload files for ingestion
+- `GET /chats` — list chats
+- `POST /chat` — send chat message / query
+
+## Development Tips
+- Inspect `backend/app/config.py` for env variable names and defaults.
+- Use the provided `static_dbs` scripts to pre-build domain-specific indexes.
+- Keep `data/` and `node_modules/` out of git (already in `.gitignore`).
+
+## Contributing
+- Open an issue or submit a PR. Keep changes small and provide tests where practical.
+
+## License
+This repository does not include a license file. Add one (e.g., MIT) if you plan to publish.
+
