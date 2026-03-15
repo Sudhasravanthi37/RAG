@@ -232,24 +232,6 @@ interface UploadedFile { id: string; name: string; chunks: number; uploadedAt: s
         </div>
       }
 
-      <!-- UPLOADED FILES SECTION -->
-      @if (uploadedFiles.length) {
-        <div class="uploaded-files-section">
-          <div class="uploaded-files-label">📂 Uploaded Files</div>
-          <div class="uploaded-files-list">
-            @for (file of uploadedFiles; track file.id) {
-              <div class="uploaded-file-item">
-                <div class="file-info">
-                  <span class="file-name">📄 {{ file.name }}</span>
-                  <span class="file-chunks">{{ file.chunks }} chunks</span>
-                </div>
-                <button class="remove-file-btn" title="Remove file" (click)="deleteUploadedFile(file.id)">🗑️</button>
-              </div>
-            }
-          </div>
-        </div>
-      }
-
       <!-- TEXT INPUT ROW -->
       <div class="input-row">
         <button class="icon-btn" title="Attach file" (click)="fileInput.click()">📎</button>
@@ -261,8 +243,41 @@ interface UploadedFile { id: string; name: string; chunks: number; uploadedAt: s
           (input)="autoH($event)">
         </textarea>
         <button class="icon-btn" [class.recording]="isRecording" title="Voice input" (click)="toggleVoice()">🎤</button>
+        @if (uploadedFiles.length) {
+          <button class="docs-tab-btn" title="Manage uploaded documents" (click)="showDocumentsPanel = !showDocumentsPanel">
+            📂 {{ uploadedFiles.length }}
+          </button>
+        }
         <button class="send-btn" [disabled]="chatSvc.isTyping()" (click)="sendMsg()">➤</button>
       </div>
+
+      <!-- DOCUMENTS PANEL MODAL -->
+      @if (showDocumentsPanel && uploadedFiles.length) {
+        <div class="overlay" (click)="showDocumentsPanel = false">
+          <div class="documents-panel" (click)="$event.stopPropagation()">
+            <div class="panel-header">
+              <h3>📂 Uploaded Documents ({{ uploadedFiles.length }})</h3>
+              <button class="close-btn" (click)="showDocumentsPanel = false">✕</button>
+            </div>
+            <div class="documents-list">
+              @for (file of uploadedFiles; track file.id) {
+                <div class="doc-item">
+                  <div class="doc-info">
+                    <div class="doc-icon">📄</div>
+                    <div class="doc-text">
+                      <div class="doc-filename">{{ file.name }}</div>
+                      <div class="doc-meta">{{ file.chunks }} chunks</div>
+                    </div>
+                  </div>
+                  <button class="btn-delete-doc" title="Remove document" (click)="deleteUploadedFile(file.id)">
+                    🗑️
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
 
       <!-- DELETE FILE CONFIRMATION -->
       @if (deleteConfirmFileId) {
@@ -312,7 +327,167 @@ interface UploadedFile { id: string; name: string; chunks: number; uploadedAt: s
     </div>
   </div>
 </div>
-  `
+  `,
+  styles: [`
+    .docs-tab-btn {
+      padding: 8px 12px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      margin: 0 4px;
+    }
+
+    .docs-tab-btn:hover {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    }
+
+    .docs-tab-btn:active {
+      transform: translateY(0);
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .documents-panel {
+      background: white;
+      border-radius: 12px 12px 0 0;
+      width: 100%;
+      max-width: 600px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+      animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .panel-header h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px 8px;
+      color: #6b7280;
+      transition: all 0.2s ease;
+    }
+
+    .close-btn:hover {
+      color: #1f2937;
+      background: #f3f4f6;
+      border-radius: 4px;
+    }
+
+    .documents-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .doc-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .doc-item:hover {
+      background: #f3f4f6;
+      border-color: #d1d5db;
+    }
+
+    .doc-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .doc-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .doc-text {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .doc-filename {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1f2937;
+      word-break: break-word;
+    }
+
+    .doc-meta {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 2px;
+    }
+
+    .btn-delete-doc {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      margin-left: 8px;
+    }
+
+    .btn-delete-doc:hover {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+  `]
 })
 export class AppShellComponent implements OnInit, AfterViewChecked {
   @ViewChild('chatArea') chatAreaEl!: ElementRef<HTMLDivElement>;
@@ -331,6 +506,7 @@ export class AppShellComponent implements OnInit, AfterViewChecked {
   activeModal  = '';
   isDragging   = false;
   isRecording  = false;
+  showDocumentsPanel = false;
   fileChips: FileChip[] = [];
   uploadedFiles: UploadedFile[] = [];
   uploadedFilesByChat: Map<string, UploadedFile[]> = new Map();
@@ -419,6 +595,7 @@ export class AppShellComponent implements OnInit, AfterViewChecked {
         }
         this.fileChips = [];
         this.msgText = '';
+        this.showDocumentsPanel = false;
       },
       error: () => this.toast.show('Failed to create chat', 'err')
     });
@@ -434,6 +611,7 @@ export class AppShellComponent implements OnInit, AfterViewChecked {
     this.uploadedFiles = this.uploadedFilesByChat.get(chat.chat_id) || [];
     this.fileChips = [];
     this.msgText = '';
+    this.showDocumentsPanel = false;
   }
 
   confirmDeleteChat(): void {
@@ -452,6 +630,7 @@ export class AppShellComponent implements OnInit, AfterViewChecked {
   // ── MODE ──────────────────────────────────────────────────────────────
   onModeChange(mode: string): void {
     this.chatSvc.currentMode.set(mode);
+    this.createChat();
   }
 
   toggleIncognito(): void {

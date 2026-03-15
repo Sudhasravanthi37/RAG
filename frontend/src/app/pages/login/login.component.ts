@@ -24,8 +24,18 @@ import { ToastService } from '../../core/services/toast.service';
         </div>
         <div class="fgrp">
           <label class="flbl">Password</label>
-          <input type="password" class="finp" [(ngModel)]="password" placeholder="••••••••" (keydown.enter)="doLogin()" />
+          <div class="password-input-wrap">
+            <input [type]="showPassword ? 'text' : 'password'" class="finp" [(ngModel)]="password" placeholder="••••••••" (keydown.enter)="doLogin()" />
+            <button type="button" class="pwd-toggle" (click)="showPassword = !showPassword" title="Toggle password visibility">
+              {{ showPassword ? '🔒' : '👁' }}
+            </button>
+          </div>
         </div>
+        <style>
+          .password-input-wrap { position: relative; }
+          .pwd-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; opacity: 0.7; transition: opacity 0.2s; }
+          .pwd-toggle:hover { opacity: 1; }
+        </style>
         <div style="text-align:right;margin-bottom:18px;margin-top:-8px;">
           <button class="auth-link" (click)="router.navigate(['/forgot'])">Forgot password?</button>
         </div>
@@ -45,6 +55,7 @@ export class LoginComponent {
   email    = '';
   password = '';
   loading  = false;
+  showPassword = false;
 
   doLogin(): void {
     if (!this.email || !this.password) { this.toast.show('Please fill all fields', 'err'); return; }
