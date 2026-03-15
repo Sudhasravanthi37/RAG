@@ -9,7 +9,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ChatService } from '../../core/services/chat.service';
 import { ToastService } from '../../core/services/toast.service';
 import { environment } from '../../../environments/environment';
-import { Message, RetrievalMetrics } from '../../core/models/models';
+import { Chat, Message, RetrievalMetrics } from '../../core/models/models';
 
 interface FileChip { id: number; name: string; status: string; done: boolean; error: boolean; }
 interface UploadedFile { id: string; name: string; chunks: number; uploadedAt: string; }
@@ -125,7 +125,7 @@ interface UploadedFile { id: string; name: string; chunks: number; uploadedAt: s
       }
       @for (c of chatSvc.chats(); track c.chat_id) {
         <div class="chat-row" [class.active]="chatSvc.currentChat()?.chat_id === c.chat_id"
-             (click)="chatSvc.openChat(c)">
+             (click)="switchToChat(c)">
           <div class="chat-row-icon" [style.background]="chatColor(c.chat_id)">📄</div>
           <div class="chat-row-body">
             <div class="chat-row-title">{{ c.title || 'New Chat' }}</div>
@@ -333,6 +333,7 @@ export class AppShellComponent implements OnInit, AfterViewChecked {
   isRecording  = false;
   fileChips: FileChip[] = [];
   uploadedFiles: UploadedFile[] = [];
+  uploadedFilesByChat: Map<string, UploadedFile[]> = new Map();
   chipId = 0;
   deleteConfirmFileId: string | null = null;
   deleteConfirmMsgIndex: number | null = null;
@@ -411,6 +412,14 @@ export class AppShellComponent implements OnInit, AfterViewChecked {
   // ── SIDEBAR ───────────────────────────────────────────────────────────
   createChat(): void {
     this.chatSvc.createChat('New Chat', this.selectedMode).subscribe({
+      next: () => {
+        const chatId = this.chatSvc.currentChat()?.chat_id;
+        if (chatId) {
+          this.uploadedFiles = this.uploadedFilesByChat.get(chatId) || [];
+        }
+        this.fileChips = [];
+        this.msgText = '';
+      },
       error: () => this.toast.show('Failed to create chat', 'err')
     });
   }
@@ -418,6 +427,13 @@ export class AppShellComponent implements OnInit, AfterViewChecked {
   delChat(e: Event, chatId: string): void {
     e.stopPropagation();
     this.deleteConfirmChatId = chatId;
+  }
+
+  switchToChat(chat: Chat): void {
+    this.chatSvc.openChat(chat);
+    this.uploadedFiles = this.uploadedFilesByChat.get(chat.chat_id) || [];
+    this.fileChips = [];
+    this.msgText = '';
   }
 
   confirmDeleteChat(): void {
@@ -486,6 +502,10 @@ export class AppShellComponent implements OnInit, AfterViewChecked {
           uploadedAt: new Date().toISOString()
         };
         this.uploadedFiles.push(uploadedFile);
+        // Store in map by chat ID
+        const filesForChat = this.uploadedFilesByChat.get(chatId) || [];
+        filesForChat.push(uploadedFile);
+        this.uploadedFilesByChat.set(chatId, filesForChat);
         // Remove chip after 3.5s
         setTimeout(() => { this.fileChips = this.fileChips.filter(c => c.id !== id); }, 3500);
         // Auto-send for medical mode
@@ -507,6 +527,14 @@ export class AppShellComponent implements OnInit, AfterViewChecked {
   confirmDeleteFile(): void {
     if (!this.deleteConfirmFileId) return;
     this.uploadedFiles = this.uploadedFiles.filter(f => f.id !== this.deleteConfirmFileId);
+    
+    // Also remove from the map
+    const chatId = this.chatSvc.currentChat()?.chat_id;
+    if (chatId) {
+      const filesForChat = this.uploadedFilesByChat.get(chatId) || [];
+      this.uploadedFilesByChat.set(chatId, filesForChat.filter(f => f.id !== this.deleteConfirmFileId));
+    }
+    
     this.toast.show('File removed from chat', 'ok');
     this.deleteConfirmFileId = null;
   }
